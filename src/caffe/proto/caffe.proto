@@ -59,6 +59,9 @@ message FillerParameter {
     AVERAGE = 2;
   }
   optional VarianceNorm variance_norm = 8 [default = FAN_IN];
+  
+  // flownet-specific parameter
+  repeated float diag_val = 5002; // Values for diagonal filler
 }
 
 message NetParameter {
@@ -394,6 +397,17 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  
+  //
+  // Flownet-specific parameters
+  //
+  
+  optional CorrelationParameter correlation_param = 3004;
+  optional DownsampleParameter downsample_param = 3006;
+  optional L1LossParameter l1_loss_param = 3001;
+  optional MeanParameter mean_param = 1000;
+  optional ResampleParameter resample_param = 1001;
+  optional WriterParameter writer_param = 3002;
 }
 
 // Message that stores parameters used to apply transformation
@@ -1333,4 +1347,74 @@ message PReLUParameter {
   optional FillerParameter filler = 1;
   // Whether or not slope paramters are shared across channels.
   optional bool channel_shared = 2 [default = false];
+}
+
+//
+// Flownet-specific parameters
+//
+
+// Message that stores parameters used by CorrelationLayer
+message CorrelationParameter {
+  optional uint32 pad = 2 [default = 0]; // The padding size (equal in Y, X)
+  optional uint32 kernel_size = 3; // The kernel size (square)
+  optional uint32 max_displacement = 4; // The maximum displacement (square)
+  optional uint32 stride_1 = 5 [default = 1]; // The stride in blob 1 (equal in Y, X)
+  optional uint32 stride_2 = 6 [default = 1]; // The stride in blob 2 (equal in Y, X)
+  
+  optional bool do_abs = 7 [default = false]; // Use absolute value of result
+  enum CorrelationType {
+    MULTIPLY = 0;
+    SUBTRACT = 1;
+  }
+  optional CorrelationType correlation_type = 15 [default = MULTIPLY]; // Multiplicative is normal correlation
+}
+
+message DownsampleParameter {
+  optional uint32 top_height = 1 [default = 0]; // The output height
+  optional uint32 top_width = 2 [default = 0]; // The output width
+}
+
+// Message that stores parameters used by L1LossLayer
+message L1LossParameter {
+  optional bool l2_per_location = 1 [default = false];
+  optional bool l2_prescale_by_channels = 2 [default = false]; // Old style
+  optional bool normalize_by_num_entries = 3 [default = false]; // if we want to normalize not by batch size, but by the number of non-NaN entries
+  optional float epsilon = 4 [default = 1e-2]; // constant for smoothing near zero
+  optional float plateau = 3001 [default = 0]; // L1 Errors smaller than plateau-value will result in zero loss and no gradient
+}
+
+message MeanParameter {
+  enum MeanOperation {
+    ADD = 1;
+    SUBTRACT = 4;
+  }
+
+  required MeanOperation operation = 1;
+  optional string file = 2;
+  repeated float value = 3;
+  optional float mean_scale = 4 [default = 1];
+  optional float input_scale = 5 [default = 1];
+  optional float output_scale = 6 [default = 1];
+}
+
+message ResampleParameter {
+    enum ResampleType {
+        NEAREST = 1;
+        LINEAR = 2;
+        CUBIC = 3;
+        AREA = 4;
+    };
+    optional bool antialias = 4 [ default = true ];
+    optional uint32 width  = 1;
+    optional uint32 height = 2;
+    optional ResampleType type = 3 [ default = LINEAR ];
+}
+
+message WriterParameter {
+  optional string file = 1 [default=""];
+  optional string folder = 2 [default=""];
+  optional string prefix = 3 [default=""];
+  optional string suffix = 4 [default=""];
+  optional bool normalize = 5 [default=false];
+  optional float scale = 6 [default=1];
 }
